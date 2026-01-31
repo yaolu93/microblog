@@ -13,8 +13,10 @@ def sum_from_1_to_n(n):
         int: 1到n的总和
     """
     total = 0
+    print(f"total = {total}")
     for i in range(1, n + 1):
         total += i
+        print(f"i = {i}")
     return total
 
 
