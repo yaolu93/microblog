@@ -35,3 +35,7 @@ sorted(motor)
 print(f"motor = {motor}")
 
 print(motor[-2])
+
+
+for car in motor:
+    print(car.title() + "that is a great car!")
