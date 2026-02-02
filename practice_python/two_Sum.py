@@ -1,4 +1,4 @@
-def two_sum(nums, target):
+def two_Sum(nums, target):
 
     hashmap = {}
 
