@@ -1,6 +1,6 @@
 docker pull jenkins/jenkins:2.387.2
 
-docker run -p 8180:8080 -p 5000:5000 --name jenkins \
+docker run -p 8080:8080 -p 50000:50000 --name jenkins \
 -u root \
 -v /mydata/jenkins_home:/var/jenkins_home \
 -v /var/run/docker.sock:/var/run/docker.sock \
