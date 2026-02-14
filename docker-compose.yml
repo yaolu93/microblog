@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: microblog
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  web:
+    build: .
+    command: gunicorn microblog:app -b 0.0.0.0:8000 -w 4
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:example@db:5432/microblog
+      - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_URL=
+    volumes:
+      - .:/home/microblog
+    restart: always
+
+  worker:
+    build: .
+    command: rq worker microblog-tasks
+    depends_on:
+      - redis
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:example@db:5432/microblog
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/home/microblog
+    restart: always
+
+volumes:
+  db_data:
