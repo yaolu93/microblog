@@ -1,3 +1,3 @@
-20:37:03 Worker rq:worker:79d6aed4da8b477f8b61e973ef5324ac started with PID 58571, version 1.15.1
-20:37:03 Subscribing to channel rq:pubsub:79d6aed4da8b477f8b61e973ef5324ac
-20:37:03 *** Listening on microblog-tasks...
+20:45:42 Worker rq:worker:af857aab6369463f906246bbab859c7c started with PID 61253, version 1.15.1
+20:45:42 Subscribing to channel rq:pubsub:af857aab6369463f906246bbab859c7c
+20:45:42 *** Listening on microblog-tasks...
