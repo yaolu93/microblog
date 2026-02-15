@@ -14,6 +14,16 @@ import rq
 from config import Config
 
 
+"""
+Application factory and extension initialization for the Microblog app.
+
+This module exposes the `create_app` factory used to build Flask
+application instances and top-level extension objects (`db`, `migrate`,
+`login`, `mail`, `moment`, `babel`). The factory pattern keeps the
+application configurable for different environments (dev/test/prod).
+"""
+
+
 def get_locale():
     return request.accept_languages.best_match(current_app.config['LANGUAGES'])
 

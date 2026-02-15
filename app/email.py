@@ -20,5 +20,8 @@ def send_email(subject, sender, recipients, text_body, html_body,
     if sync:
         mail.send(msg)
     else:
+        # Spawn a background thread to send email so web requests are not
+        # blocked. Exceptions are caught and logged inside the thread.
         Thread(target=send_async_email,
-               args=(current_app._get_current_object(), msg)).start()
+               args=(current_app._get_current_object(), msg),
+               daemon=True).start()

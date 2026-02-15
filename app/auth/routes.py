@@ -1,3 +1,9 @@
+"""Authentication routes: login, logout, registration, and password reset.
+
+These endpoints live under the `auth` blueprint and handle user session
+management and password reset workflows.
+"""
+
 from flask import render_template, redirect, url_for, flash, request
 from urllib.parse import urlsplit
 from flask_login import login_user, logout_user, current_user

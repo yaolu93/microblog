@@ -1,3 +1,9 @@
+"""Main application routes: home, user profiles, messages, and search.
+
+Registered on the `main` blueprint; these routes implement the primary
+user-facing functionality of the microblog application.
+"""
+
 from datetime import datetime, timezone
 from flask import render_template, flash, redirect, url_for, request, g, \
     current_app

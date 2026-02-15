@@ -1,3 +1,9 @@
+"""Error handlers for both HTML and JSON responses.
+
+Provides user-friendly error pages and JSON error payloads for API
+requests depending on the client's accepted content types.
+"""
+
 from flask import render_template, request
 from app import db
 from app.errors import bp

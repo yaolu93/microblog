@@ -1,3 +1,10 @@
+"""
+Database models and search/pagination mixins for the Microblog app.
+
+Contains SQLAlchemy models for `User`, `Post`, `Message`, `Notification`,
+and `Task`, plus helper mixins `SearchableMixin` and `PaginatedAPIMixin`.
+"""
+
 from datetime import datetime, timezone, timedelta
 from hashlib import md5
 import json
@@ -213,6 +220,12 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                     user=self)
         db.session.add(task)
         return task
+        """Enqueue a background task with RQ.
+
+        Returns the created `Task` model on success, or `None` if enqueue
+        failed (for example when Redis is unavailable). The task record is
+        created in the database to track progress.
+        """
 
     def get_tasks_in_progress(self):
         query = self.tasks.select().where(Task.complete == False)

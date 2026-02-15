@@ -3,10 +3,17 @@ import sys
 import time
 import sqlalchemy as sa
 from flask import render_template
+"""Background RQ tasks for Microblog.
+
+Tasks run in a separate process and report progress back to the database
+via the `Task` model and notifications.
+"""
+
 from rq import get_current_job
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
+
 
 app = create_app()
 app.app_context().push()
