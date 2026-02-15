@@ -12,7 +12,7 @@
       "pathMappings": [
         {
           "localRoot": "${workspaceFolder}",
-          "remoteRoot": "/home/microblog"
+          "remoteRoot": "${workspaceFolder}"
         }
       ]
     },
@@ -27,9 +27,43 @@
       "pathMappings": [
         {
           "localRoot": "${workspaceFolder}",
-          "remoteRoot": "/home/microblog"
+          "remoteRoot": "${workspaceFolder}"
         }
       ]
+    },
+    {
+      "name": "Launch Flask (debug)",
+      "type": "python",
+      "request": "launch",
+      "module": "flask",
+      "args": [
+        "run",
+        "--no-debugger",
+        "--no-reload",
+        "--host=127.0.0.1",
+        "--port=5000"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "FLASK_APP": "microblog.py",
+        "FLASK_ENV": "development",
+        "FLASK_DEBUG": "0"
+      },
+      "justMyCode": true,
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Launch RQ worker (debug)",
+      "type": "python",
+      "request": "launch",
+      "module": "rq",
+      "args": [
+        "worker",
+        "microblog-tasks"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true
     }
   ]
 }

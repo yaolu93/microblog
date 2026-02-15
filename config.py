@@ -15,7 +15,15 @@ class Config:
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT')
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
+
+    def _env_bool(name, default=False):
+        val = os.environ.get(name)
+        if val is None:
+            return default
+        return str(val).lower() in ('1', 'true', 'yes', 'on')
+
+    MAIL_USE_TLS = _env_bool('MAIL_USE_TLS', False)
+    MAIL_USE_SSL = _env_bool('MAIL_USE_SSL', False)
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['lytreetree@gmail.com']
