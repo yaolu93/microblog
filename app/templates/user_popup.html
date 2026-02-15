@@ -1,3 +1,4 @@
+<!-- Template: user_popup.html - small user popup used in lists -->
 <div>
   <img src="{{ user.avatar(64) }}" style="margin: 5px; float: left">
   <p><a href="{{ url_for('main.user', username=user.username) }}">{{ user.username }}</a></p>

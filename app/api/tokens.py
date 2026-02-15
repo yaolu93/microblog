@@ -1,3 +1,10 @@
+"""Token endpoints for the API.
+
+`POST /api/tokens` returns a user token when valid basic auth
+credentials are provided. `DELETE /api/tokens` revokes the current
+token for an authenticated token user.
+"""
+
 from app import db
 from app.api import bp
 from app.api.auth import basic_auth, token_auth

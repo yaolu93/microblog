@@ -1,3 +1,9 @@
+"""WTForms definitions for authentication-related forms.
+
+Defines login, registration and password reset forms used by the
+`auth` blueprint.
+"""
+
 from flask_wtf import FlaskForm
 from flask_babel import _, lazy_gettext as _l
 from wtforms import StringField, PasswordField, BooleanField, SubmitField

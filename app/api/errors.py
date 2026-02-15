@@ -1,3 +1,9 @@
+"""API error helpers.
+
+Return consistent JSON error payloads for API clients and wire the
+blueprint-level error handler to convert HTTP exceptions to JSON.
+"""
+
 from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.exceptions import HTTPException
 from app.api import bp

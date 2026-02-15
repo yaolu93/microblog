@@ -45,8 +45,35 @@ fi
 
 if [ "$REQ_SHA" != "$PREV_SHA" ]; then
   echo "Installing/updating Python requirements..."
-  "$VENV_DIR/bin/python" -m pip install --upgrade pip >/dev/null
-  "$VENV_DIR/bin/python" -m pip install -r "$REQ_FILE"
+  # Ensure pip exists inside the venv (some system Python builds require ensurepip)
+  "$VENV_DIR/bin/python" -m ensurepip --upgrade >/dev/null 2>&1 || true
+  "$VENV_DIR/bin/python" -m pip install --upgrade pip >/dev/null 2>&1 || true
+
+  # Run pip install and capture output so we can detect PEP 668 errors and retry safely
+  TMP_OUT=$(mktemp)
+  if "$VENV_DIR/bin/python" -m pip install -r "$REQ_FILE" >"$TMP_OUT" 2>&1; then
+    rm -f "$TMP_OUT"
+  else
+    # If pip failed due to PEP 668 (externally-managed-environment), retry once with
+    # --break-system-packages and warn the user. This flag is necessary on some
+    # Debian/Ubuntu-managed Python installs when modifying packages.
+    if grep -qi "externally-managed-environment" "$TMP_OUT" >/dev/null 2>&1; then
+      echo "pip install failed with PEP 668; retrying with --break-system-packages (one-time)"
+      if "$VENV_DIR/bin/python" -m pip install --break-system-packages -r "$REQ_FILE" >>"$TMP_OUT" 2>&1; then
+        rm -f "$TMP_OUT"
+      else
+        echo "Retry with --break-system-packages also failed. See $TMP_OUT for details." >&2
+        cat "$TMP_OUT" >&2
+        rm -f "$TMP_OUT"
+        exit 1
+      fi
+    else
+      echo "pip install failed. See $TMP_OUT for details." >&2
+      cat "$TMP_OUT" >&2
+      rm -f "$TMP_OUT"
+      exit 1
+    fi
+  fi
   echo "$REQ_SHA" > "$REQ_SHA_FILE"
 else
   echo "Requirements unchanged; skipping pip install"

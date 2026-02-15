@@ -1,8 +1,15 @@
 import sqlalchemy as sa
+"""Authentication helpers for the API.
+
+Provides HTTP basic and token authentication handlers used by the
+API endpoints to protect resources.
+"""
+
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from app import db
 from app.models import User
 from app.api.errors import error_response
+
 
 basic_auth = HTTPBasicAuth()
 token_auth = HTTPTokenAuth()

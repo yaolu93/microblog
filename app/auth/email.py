@@ -1,3 +1,9 @@
+"""Helpers to send authentication-related emails.
+
+Encapsulates the construction of password-reset messages so routes
+can call a single helper to perform the action.
+"""
+
 from flask import render_template, current_app
 from flask_babel import _
 from app.email import send_email
