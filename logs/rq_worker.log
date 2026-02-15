@@ -1,3 +1,6 @@
-20:45:42 Worker rq:worker:af857aab6369463f906246bbab859c7c started with PID 61253, version 1.15.1
-20:45:42 Subscribing to channel rq:pubsub:af857aab6369463f906246bbab859c7c
-20:45:42 *** Listening on microblog-tasks...
+21:17:49 Worker rq:worker:15a78da996704e199ab1a87bbcaa4d60 started with PID 6210, version 1.15.1
+21:17:49 Subscribing to channel rq:pubsub:15a78da996704e199ab1a87bbcaa4d60
+21:17:49 *** Listening on microblog-tasks...
+21:58:20 Cleaning registries for queue: microblog-tasks
+09:50:07 Cleaning registries for queue: microblog-tasks
+
