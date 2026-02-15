@@ -16,7 +16,7 @@ services:
 
   web:
     build: .
-    command: gunicorn microblog:app -b 0.0.0.0:8000 -w 4
+    command: gunicorn microblog:app -b 0.0.0.0:8000 -w 4 --log-level debug --access-logfile - --error-logfile -
     ports:
       - "8000:8000"
     depends_on:
@@ -27,6 +27,10 @@ services:
       - DATABASE_URL=postgresql://postgres:example@db:5432/microblog
       - REDIS_URL=redis://redis:6379/0
       - ELASTICSEARCH_URL=
+      - RUN_MIGRATIONS=true
+      - LOG_TO_STDOUT=true
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
     volumes:
       - .:/home/microblog
     restart: always
@@ -40,6 +44,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:example@db:5432/microblog
       - REDIS_URL=redis://redis:6379/0
+      - RUN_MIGRATIONS=false
+      - LOG_TO_STDOUT=true
+      - PYTHONUNBUFFERED=1
     volumes:
       - .:/home/microblog
     restart: always
