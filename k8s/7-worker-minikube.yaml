@@ -34,9 +34,3 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "100m"
-        volumeMounts:
-        - name: app-storage
-          mountPath: /home/microblog
-      volumes:
-      - name: app-storage
-        emptyDir: {}
