@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microblog-config
+  namespace: microblog
+data:
+  FLASK_ENV: production
+  FLASK_DEBUG: "1"
+  LOG_TO_STDOUT: "true"
+  PYTHONUNBUFFERED: "1"
+  REDIS_URL: redis://redis:6379/0
+  DATABASE_URL: postgresql://postgres:example@postgres:5432/microblog
+  ELASTICSEARCH_URL: ""
+  # RUN_MIGRATIONS: depends on service (web=true, worker=false)
+  POSTS_PER_PAGE: "25"

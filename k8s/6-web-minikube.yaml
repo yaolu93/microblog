@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: microblog
+  labels:
+    app: web
+spec:
+  selector:
+    app: web
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: microblog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: web
+        image: microblog:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        command: ["./boot.sh"]
+        args: ["gunicorn", "microblog:app", "-b", "0.0.0.0:8000", "-w", "2", "--log-level", "debug", "--access-logfile", "-", "--error-logfile", "-"]
+        envFrom:
+        - configMapRef:
+            name: microblog-config
+        - secretRef:
+            name: microblog-secret
+        env:
+        - name: RUN_MIGRATIONS
+          value: "true"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: app-storage
+          mountPath: /home/microblog
+      volumes:
+      - name: app-storage
+        emptyDir: {}

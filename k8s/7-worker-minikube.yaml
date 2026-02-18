@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: microblog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: microblog:latest
+        imagePullPolicy: Never
+        command: ["./boot.sh"]
+        args: ["rq", "worker", "microblog-tasks"]
+        envFrom:
+        - configMapRef:
+            name: microblog-config
+        - secretRef:
+            name: microblog-secret
+        env:
+        - name: RUN_MIGRATIONS
+          value: "false"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: app-storage
+          mountPath: /home/microblog
+      volumes:
+      - name: app-storage
+        emptyDir: {}
