@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: microblog-ingress
+  namespace: microblog
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "microblog-ip"
+    networking.gke.io/managed-certificates: "microblog-cert"
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  rules:
+  - host: "microblog.example.com"
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8000
+status:
+  loadBalancer:
+    ingress:
+    - ip: ""
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: microblog-cert
+  namespace: microblog
+spec:
+  domains:
+  - microblog.example.com
+---
+apiVersion: compute.cnpg.io/v1
+kind: BackendConfig
+metadata:
+  name: web-backendconfig
+  namespace: microblog
+spec:
+  sessionAffinity:
+    affinityType: "CLIENT_IP"
+    affinityCookieTtlSec: 3600
+  healthChecks:
+  - checkIntervalSec: 10
+    requestPath: /
+    port: 8000
+    type: HTTP
+  timeoutSec: 30
+  customRequestHeaders:
+    headers:
+      - "X-Forwarded-Proto: https"
+  iap:
+    enabled: false

@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: microblog
+  labels:
+    app: web
+spec:
+  selector:
+    app: web
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: microblog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        iam.gke.io/gcp-service-account: gke-microblog-sa@microblog-487821.iam.gserviceaccount.com
+    spec:
+      serviceAccountName: microblog-ksa
+      initContainers:
+      - name: wait-for-db
+        image: busybox:latest
+        command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: web
+        image: asia-east1-docker.pkg.dev/microblog-487821/microblog/microblog:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        command: ["./boot.sh"]
+        args: ["gunicorn", "microblog:app", "-b", "0.0.0.0:8000", "-w", "4", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-"]
+        envFrom:
+        - configMapRef:
+            name: microblog-config
+        - secretRef:
+            name: microblog-secret
+        env:
+        - name: RUN_MIGRATIONS
+          value: "true"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - web
+              topologyKey: kubernetes.io/hostname

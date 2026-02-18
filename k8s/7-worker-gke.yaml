@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: microblog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+      annotations:
+        iam.gke.io/gcp-service-account: gke-microblog-sa@microblog-487821.iam.gserviceaccount.com
+    spec:
+      serviceAccountName: microblog-ksa
+      containers:
+      - name: worker
+        image: asia-east1-docker.pkg.dev/microblog-487821/microblog/microblog:latest
+        imagePullPolicy: IfNotPresent
+        command: ["./boot.sh"]
+        args: ["rq", "worker", "microblog-tasks"]
+        envFrom:
+        - configMapRef:
+            name: microblog-config
+        - secretRef:
+            name: microblog-secret
+        env:
+        - name: RUN_MIGRATIONS
+          value: "false"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - worker
+              topologyKey: kubernetes.io/hostname
