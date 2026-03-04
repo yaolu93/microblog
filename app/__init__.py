@@ -12,6 +12,8 @@ from elasticsearch import Elasticsearch
 from redis import Redis
 import rq
 from config import Config
+from prometheus_client import Counter, Histogram, Gauge
+import time
 
 
 """
@@ -37,6 +39,35 @@ mail = Mail()
 moment = Moment()
 babel = Babel()
 
+# Prometheus metrics
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request latency',
+    ['method', 'endpoint']
+)
+
+db_connections = Gauge(
+    'db_connections_total',
+    'Database connections'
+)
+
+redis_connections = Gauge(
+    'redis_connections_total',
+    'Redis connections'
+)
+
+app_info = Gauge(
+    'microblog_app_info',
+    'Microblog application info',
+    ['version']
+)
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -52,6 +83,45 @@ def create_app(config_class=Config):
         if app.config['ELASTICSEARCH_URL'] else None
     app.redis = Redis.from_url(app.config['REDIS_URL'])
     app.task_queue = rq.Queue('microblog-tasks', connection=app.redis)
+
+    # Setup Prometheus metrics middleware
+    @app.before_request
+    def before_request():
+        request.start_time = time.time()
+
+    @app.after_request
+    def after_request(response):
+        if hasattr(request, 'start_time'):
+            duration = time.time() - request.start_time
+            http_requests_total.labels(
+                method=request.method,
+                endpoint=request.endpoint or 'unknown',
+                status=response.status_code
+            ).inc()
+            http_request_duration_seconds.labels(
+                method=request.method,
+                endpoint=request.endpoint or 'unknown'
+            ).observe(duration)
+        return response
+
+    # Register Prometheus metrics endpoint
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    
+    @app.route('/metrics')
+    def metrics():
+        # Update connection metrics
+        try:
+            db_connections.set(1 if db.engine.pool.checkedout() >= 0 else 0)
+        except:
+            pass
+        
+        try:
+            redis_connections.set(1 if app.redis.ping() else 0)
+        except:
+            pass
+        
+        app_info.labels(version='1.0').set(1)
+        return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
