@@ -11,6 +11,13 @@
 21:28:03 Cleaning registries for queue: microblog-tasks
 21:55:03 Cleaning registries for queue: microblog-tasks
 12:56:50 Cleaning registries for queue: microblog-tasks
-9:40:02 Cleaning registries for queue: microblog-tasks
-21:01:03 Cleaning registries for queue: microblog-tasks
-22:49:04 Cleaning registries for queue: microblog-tasks
+13:23:50 Cleaning registries for queue: microblog-tasks
+13:37:25 Worker d4dcf82e95ca40359f7e98316ccbc641 [PID 56989]: warm shut down requested
+ERROR:root:Error 111 connecting to localhost:6379. Connection refused.
+0 [PID 6210]: warm shut down requested
+ERROR:root:Error 111 connecting to localhost:6379. Connection refused.
+Exception in thread Thread-1:
+Traceback (most recent call last):
+  File "/usr/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+    self.run()
+  File "/home/yao/fromGithub/microblog/.venv/lib/python3.11/site-packages/redis/client.py", line 1151, in run
