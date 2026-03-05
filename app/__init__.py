@@ -1,5 +1,6 @@
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
+import json
 import os
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
@@ -14,6 +15,8 @@ import rq
 from config import Config
 from prometheus_client import Counter, Histogram, Gauge
 import time
+import requests
+from threading import Thread
 
 
 """
@@ -28,6 +31,44 @@ application configurable for different environments (dev/test/prod).
 
 def get_locale():
     return request.accept_languages.best_match(current_app.config['LANGUAGES'])
+
+
+class JSONFormatter(logging.Formatter):
+    """Format logs as JSON for Logstash"""
+    def format(self, record):
+        log_data = {
+            'timestamp': self.formatTime(record),
+            'level': record.levelname,
+            'logger': record.name,
+            'message': record.getMessage(),
+            'module': record.module,
+            'function': record.funcName,
+            'line': record.lineno,
+        }
+        if record.exc_info:
+            log_data['exception'] = self.formatException(record.exc_info)
+        return json.dumps(log_data)
+
+
+class LogstashHandler(logging.Handler):
+    """Send logs to Logstash via HTTP"""
+    def __init__(self, host='logstash', port=9600):
+        super().__init__()
+        self.url = f"http://{host}:{port}"
+    
+    def emit(self, record):
+        try:
+            log_data = json.loads(self.format(record))
+            # 异步发送，避免阻塞
+            Thread(target=self._send, args=(log_data,), daemon=True).start()
+        except Exception:
+            self.handleError(record)
+    
+    def _send(self, log_data):
+        try:
+            requests.post(self.url, json=log_data, timeout=2)
+        except Exception as e:
+            print(f"Failed to send log to Logstash: {e}")
 
 
 db = SQLAlchemy()
@@ -154,6 +195,15 @@ def create_app(config_class=Config):
                 credentials=auth, secure=secure)
             mail_handler.setLevel(logging.ERROR)
             app.logger.addHandler(mail_handler)
+
+        # Add Logstash handler
+        try:
+            logstash_handler = LogstashHandler(host='logstash', port=9600)
+            logstash_handler.setFormatter(JSONFormatter())
+            logstash_handler.setLevel(logging.INFO)
+            app.logger.addHandler(logstash_handler)
+        except Exception as e:
+            print(f"Warning: Could not initialize Logstash handler: {e}")
 
         if app.config['LOG_TO_STDOUT']:
             stream_handler = logging.StreamHandler()
