@@ -245,3 +245,31 @@ def notifications():
         'data': n.get_data(),
         'timestamp': n.timestamp
     } for n in notifications]
+
+
+@bp.route('/resume')
+@login_required
+def resume():
+    """Display resume from markdown file"""
+    from markdown_it import MarkdownIt
+    from pathlib import Path
+    
+    try:
+        # Read resume.md file
+        resume_file = Path(current_app.root_path).parent / 'resume.md'
+        if not resume_file.exists():
+            flash(_('Resume file not found.'))
+            return redirect(url_for('main.index'))
+        
+        with open(resume_file, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
+        
+        # Convert markdown to HTML
+        md = MarkdownIt()
+        html_content = md.render(markdown_content)
+        
+        return render_template('resume.html', title=_('About Me'), 
+                             content=html_content)
+    except Exception as e:
+        flash(_('Error loading resume: %(error)s', error=str(e)))
+        return redirect(url_for('main.index'))

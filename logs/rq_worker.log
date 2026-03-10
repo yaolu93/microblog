@@ -1,6 +1,4 @@
-20:53:16 Worker rq:worker:a827ae73e6704b0fb6b489a9a6ca3e7a started with PID 349791, version 1.15.1
-20:53:16 Subscribing to channel rq:pubsub:a827ae73e6704b0fb6b489a9a6ca3e7a
-20:53:16 *** Listening on microblog-tasks...
-20:53:16 Cleaning registries for queue: microblog-tasks
-21:01:57 Worker a827ae73e6704b0fb6b489a9a6ca3e7a [PID 349791]: warm shut down requested
-21:01:57 Unsubscribing from channel rq:pubsub:a827ae73e6704b0fb6b489a9a6ca3e7a
+21:12:51 Worker rq:worker:ffc2d6668cc243e3a869f1f19cece914 started with PID 355154, version 1.15.1
+21:12:51 Subscribing to channel rq:pubsub:ffc2d6668cc243e3a869f1f19cece914
+21:12:51 *** Listening on microblog-tasks...
+21:12:51 Cleaning registries for queue: microblog-tasks
