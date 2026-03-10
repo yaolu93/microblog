@@ -247,29 +247,29 @@ def notifications():
     } for n in notifications]
 
 
-@bp.route('/resume')
+@bp.route('/aboutme')
 @login_required
-def resume():
-    """Display resume from markdown file"""
+def aboutme():
+    """Display aboutme from markdown file"""
     from markdown_it import MarkdownIt
     from pathlib import Path
     
     try:
-        # Read resume.md file
-        resume_file = Path(current_app.root_path).parent / 'resume.md'
-        if not resume_file.exists():
-            flash(_('Resume file not found.'))
+        # Read aboutme.md file
+        aboutme_file = Path(current_app.root_path).parent / 'aboutme.md'
+        if not aboutme_file.exists():
+            flash(_('About Me file not found.'))
             return redirect(url_for('main.index'))
         
-        with open(resume_file, 'r', encoding='utf-8') as f:
+        with open(aboutme_file, 'r', encoding='utf-8') as f:
             markdown_content = f.read()
         
         # Convert markdown to HTML
         md = MarkdownIt()
         html_content = md.render(markdown_content)
         
-        return render_template('resume.html', title=_('About Me'), 
+        return render_template('aboutme.html', title=_('About Me'), 
                              content=html_content)
     except Exception as e:
-        flash(_('Error loading resume: %(error)s', error=str(e)))
+        flash(_('Error loading aboutme: %(error)s', error=str(e)))
         return redirect(url_for('main.index'))
