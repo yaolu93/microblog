@@ -1,0 +1,52 @@
+{{- if .Values.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.worker.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.worker.name }}
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.worker.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.worker.name }}
+    spec:
+      {{- if .Values.workloadIdentity.enabled }}
+      serviceAccountName: {{ .Values.workloadIdentity.kubernetesServiceAccount }}
+      {{- end }}
+      {{- if .Values.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ .Values.worker.name }}
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      containers:
+      - name: {{ .Values.worker.name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["rq", "worker", "microblog-tasks"]
+        {{- if .Values.worker.env }}
+        env:
+        {{- toYaml .Values.worker.env | nindent 8 }}
+        {{- end }}
+        resources:
+          requests:
+            memory: {{ .Values.worker.resources.requests.memory | quote }}
+            cpu: {{ .Values.worker.resources.requests.cpu | quote }}
+          limits:
+            memory: {{ .Values.worker.resources.limits.memory | quote }}
+            cpu: {{ .Values.worker.resources.limits.cpu | quote }}
+{{- end }}

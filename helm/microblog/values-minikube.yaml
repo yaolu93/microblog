@@ -1,0 +1,74 @@
+# Minikube-specific values override
+# Usage: helm install microblog ./helm/microblog -f helm/microblog/values-minikube.yaml
+
+global:
+  environment: development
+
+image:
+  pullPolicy: Never  # Use local Docker image in Minikube
+
+app:
+  flaskEnv: development
+  logLevel: debug
+
+postgres:
+  storage:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+redis:
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+web:
+  replicaCount: 1
+  service:
+    type: NodePort  # Use NodePort for Minikube
+    port: 30080
+    targetPort: 8000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+webAutoscaling:
+  minReplicas: 1
+  maxReplicas: 3
+
+workerAutoscaling:
+  minReplicas: 1
+  maxReplicas: 2
+
+ingress:
+  enabled: false  # Disabled for Minikube
+
+workloadIdentity:
+  enabled: false  # Disabled for Minikube
+
+podAntiAffinity:
+  enabled: false  # Not needed for single-node Minikube

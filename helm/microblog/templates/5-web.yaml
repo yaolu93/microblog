@@ -1,0 +1,89 @@
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.web.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.web.name }}
+spec:
+  type: {{ .Values.web.service.type }}
+  selector:
+    app: {{ .Values.web.name }}
+  ports:
+    - port: {{ .Values.web.service.port }}
+      targetPort: {{ .Values.web.service.targetPort }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.web.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.web.name }}
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.web.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.web.name }}
+    spec:
+      {{- if .Values.workloadIdentity.enabled }}
+      serviceAccountName: {{ .Values.workloadIdentity.kubernetesServiceAccount }}
+      {{- end }}
+      {{- if .Values.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ .Values.web.name }}
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.28
+        command: ['sh', '-c', 'until nc -z {{ .Values.postgres.name }}.{{ .Values.namespace.name }}.svc.cluster.local {{ .Values.postgres.port }}; do echo waiting for db; sleep 2; done;']
+      containers:
+      - name: {{ .Values.web.name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+          - gunicorn
+          - microblog:app
+          - -b
+          - 0.0.0.0:{{ .Values.web.port }}
+          - -w
+          - "4"
+          - --log-level
+          - debug
+        ports:
+        - containerPort: {{ .Values.web.port }}
+        {{- if .Values.web.env }}
+        env:
+        {{- toYaml .Values.web.env | nindent 8 }}
+        {{- end }}
+        resources:
+          requests:
+            memory: {{ .Values.web.resources.requests.memory | quote }}
+            cpu: {{ .Values.web.resources.requests.cpu | quote }}
+          limits:
+            memory: {{ .Values.web.resources.limits.memory | quote }}
+            cpu: {{ .Values.web.resources.limits.cpu | quote }}
+        {{- if .Values.web.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.web.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.web.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.web.readinessProbe | nindent 10 }}
+        {{- end }}
+{{- end }}

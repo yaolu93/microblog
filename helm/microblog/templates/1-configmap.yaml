@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.app.name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+data:
+  FLASK_ENV: {{ .Values.configMap.FLASK_ENV | quote }}
+  REDIS_URL: {{ .Values.configMap.REDIS_URL | quote }}
+  DATABASE_URL: {{ .Values.configMap.DATABASE_URL | quote }}
+  POSTS_PER_PAGE: {{ .Values.configMap.POSTS_PER_PAGE | quote }}
