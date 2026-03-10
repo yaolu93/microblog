@@ -248,7 +248,6 @@ def notifications():
 
 
 @bp.route('/aboutme')
-@login_required
 def aboutme():
     """Display aboutme from markdown file"""
     from markdown_it import MarkdownIt
