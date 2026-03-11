@@ -2,8 +2,26 @@
 
 {% block content %}
 <div class="row">
-  <div class="col-md-8 mx-auto">
-    <div class="card mt-4">
+  <div class="col-md-10 mx-auto">
+    <!-- 🎯 改进 1: 头部简介卡片 -->
+    <div class="intro-card mt-4 mb-4">
+      <div class="intro-content">
+        <h1>👨‍💻 Yao Lu</h1>
+        <div class="intro-title">Cloud & DevOps Engineer | Microservices Architect</div>
+        <div class="intro-tags">
+          <span class="intro-tag">6+ Years Experience</span>
+          <span class="intro-tag">Kubernetes Expert</span>
+          <span class="intro-tag">System Design</span>
+          <span class="intro-tag">Problem Solver</span>
+        </div>
+        <p class="intro-description">
+          Knowledge Enthusiast building high-availability systems, migrating services to Kubernetes, 
+          and driving technical innovation. Fast learner with strong problem-solving skills.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-body">
         <!-- About Me content -->
         <div class="aboutme-content">
@@ -15,6 +33,52 @@
 </div>
 
 <style>
+  /* ==================== 改进 1: 头部简介卡片样式 ==================== */
+  .intro-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    padding: 40px 30px;
+    color: white;
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+  }
+
+  .intro-content h1 {
+    margin: 0 0 10px 0;
+    font-size: 2.8em;
+    font-weight: 700;
+  }
+
+  .intro-title {
+    font-size: 1.3em;
+    font-weight: 300;
+    margin-bottom: 20px;
+    opacity: 0.95;
+  }
+
+  .intro-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .intro-tag {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    backdrop-filter: blur(10px);
+  }
+
+  .intro-description {
+    margin: 0;
+    font-size: 1.05em;
+    line-height: 1.6;
+    opacity: 0.9;
+  }
+
+  /* ==================== 改进 2-4: 文章内容样式 ==================== */
   .aboutme-content {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.8;
@@ -29,36 +93,84 @@
     font-size: 2.5em;
   }
 
+  /* 改进：使用颜色和 icon 区分不同的 section */
   .aboutme-content h2 {
-    color: #007bff;
     font-size: 1.5em;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    border-left: 4px solid #007bff;
-    padding-left: 10px;
+    margin-top: 40px;
+    margin-bottom: 25px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #e9ecef;
+    font-weight: 600;
   }
 
+  .aboutme-content h2:nth-of-type(1) {
+    color: #667eea;
+    border-bottom-color: #667eea;
+  }
+
+  .aboutme-content h2:nth-of-type(2) {
+    color: #f59e0b;
+    border-bottom-color: #f59e0b;
+  }
+
+  .aboutme-content h2:nth-of-type(3) {
+    color: #10b981;
+    border-bottom-color: #10b981;
+  }
+
+  /* 改进 3: Timeline 样式用于职业经历 */
   .aboutme-content h3 {
     color: #495057;
     font-size: 1.2em;
-    margin-top: 15px;
-    margin-bottom: 5px;
+    margin-top: 25px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    position: relative;
+    padding-left: 28px;
+  }
+
+  /* 为 h3 添加 icon circle 效果 */
+  .aboutme-content h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: #667eea;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #667eea;
+  }
+
+  /* 职业经历的时间标记 */
+  .aboutme-content h3 + p > span[style*="float:right"] {
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #666;
   }
 
   .aboutme-content ul, .aboutme-content ol {
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+    padding-left: 24px;
   }
 
   .aboutme-content li {
-    margin-bottom: 5px;
+    margin-bottom: 10px;
+    line-height: 1.6;
   }
 
   .aboutme-content p {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
   }
 
   .aboutme-content strong {
     color: #212529;
+    font-weight: 600;
   }
 
   .aboutme-content em {
@@ -66,8 +178,8 @@
   }
 
   .aboutme-content hr {
-    border-top: 1px solid #e9ecef;
-    margin: 20px 0;
+    border-top: 2px solid #e9ecef;
+    margin: 30px 0;
   }
 
   .aboutme-content code {
@@ -78,17 +190,20 @@
     font-family: 'Courier New', monospace;
   }
 
+  /* 改进 2: 技能标签样式 */
   .aboutme-content blockquote {
-    border-left: 4px solid #e9ecef;
-    padding-left: 15px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-left: 5px solid #667eea;
+    padding: 20px 20px;
     margin-left: 0;
-    color: #6c757d;
+    border-radius: 6px;
+    color: #444;
   }
 
-  /* Print styles for better PDF printing */
+  /* 打印样式 */
   @media print {
-    body {
-      background: white;
+    .intro-card {
+      page-break-after: avoid;
     }
     .card {
       border: none;
@@ -96,6 +211,26 @@
     }
     .aboutme-content h2 {
       page-break-after: avoid;
+    }
+  }
+
+  /* 响应式设计 */
+  @media (max-width: 768px) {
+    .intro-card {
+      padding: 30px 20px;
+    }
+    .intro-content h1 {
+      font-size: 2em;
+    }
+    .intro-title {
+      font-size: 1.1em;
+    }
+    .intro-tags {
+      flex-direction: column;
+    }
+    .intro-tag {
+      width: 100%;
+      text-align: center;
     }
   }
 </style>
