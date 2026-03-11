@@ -33,10 +33,12 @@ build/
 htmlcov/
 .tox/
 
-# Docs
+# Docs (but keep aboutme.md as it's needed by the app)
 docs/
 README.md
 LICENSE
+DEBUG_QUICKSTART.md
+MONITORING.md
 
 # Deployment
 Dockerfile
@@ -70,8 +72,7 @@ Thumbs.db
 Jenkinsfile
 .circleci/
 
-# Misc
-*.md
+# Misc (but keep aboutme.md for the application)
 .env.example
 .DS_Store
 .vagrant/

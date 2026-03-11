@@ -271,11 +271,30 @@ def aboutme():
     """Display aboutme from markdown file"""
     from markdown_it import MarkdownIt
     from pathlib import Path
+    import os
     
     try:
-        # Read aboutme.md file
-        aboutme_file = Path(current_app.root_path).parent / 'aboutme.md'
-        if not aboutme_file.exists():
+        # Find aboutme.md - try multiple possible locations for robustness
+        # This handles both local development and Docker container environments
+        possible_paths = [
+            # Method 1: Relative to Flask app root (most common)
+            Path(current_app.root_path).parent / 'aboutme.md',
+            # Method 2: From os.getcwd() (for containerized environments)
+            Path(os.getcwd()) / 'aboutme.md',
+            # Method 3: Explicit Docker path
+            Path('/app') / 'aboutme.md',
+        ]
+        
+        aboutme_file = None
+        for path in possible_paths:
+            if path.exists() and path.is_file():
+                aboutme_file = path
+                break
+        
+        if aboutme_file is None:
+            current_app.logger.warning(
+                f'Unable to find aboutme.md. Tried paths: {possible_paths}'
+            )
             flash(_('About Me file not found.'))
             return redirect(url_for('main.index'))
         
@@ -289,5 +308,6 @@ def aboutme():
         return render_template('aboutme.html', title=_('About Me'), 
                              content=html_content)
     except Exception as e:
+        current_app.logger.error(f'Error loading aboutme: {str(e)}')
         flash(_('Error loading aboutme: %(error)s', error=str(e)))
         return redirect(url_for('main.index'))

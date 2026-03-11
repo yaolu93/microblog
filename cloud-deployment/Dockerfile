@@ -57,6 +57,10 @@ WORKDIR /app
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Explicitly ensure about me markdown file is present
+# (handles cases where it might be filtered by .dockerignore or other rules)
+RUN test -f /app/aboutme.md || echo "Warning: aboutme.md not found in /app"
+
 # Ensure necessary directories exist and fix permissions
 RUN mkdir -p logs && chown -R appuser:appuser /app logs
 
