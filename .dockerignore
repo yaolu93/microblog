@@ -1,0 +1,79 @@
+# Version control
+.git
+.gitignore
+.gitlab-ci.yml
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov/
+.tox/
+
+# Docs
+docs/
+README.md
+LICENSE
+
+# Deployment
+Dockerfile
+docker-compose.yml
+.dockerignore
+helm/
+k8s/
+jenkins_docker/
+deployment/
+
+# Logs and tmp
+logs/
+tmp/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+migrations/versions/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# OS
+Thumbs.db
+
+# CI/CD
+.gitlab-ci.yml
+Jenkinsfile
+.circleci/
+
+# Misc
+*.md
+.env.example
+.DS_Store
+.vagrant/
+Makefile
+Procfile

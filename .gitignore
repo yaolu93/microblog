@@ -59,3 +59,12 @@ app.db
 microblog.log*
 tmp
 logs
+# Environment variables / Secrets
+.env.cloud
+.env.local
+.env
+*.env
+
+# Cloud deployment temporary files
+cloud-deployment/.env.cloud
+cloud-deployment/.env.local

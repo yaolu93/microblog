@@ -6,7 +6,7 @@ user-facing functionality of the microblog application.
 
 from datetime import datetime, timezone
 from flask import render_template, flash, redirect, url_for, request, g, \
-    current_app
+    current_app, jsonify
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 import sqlalchemy as sa
@@ -19,6 +19,26 @@ from app.translate import translate
 from app.main import bp
 
 
+@bp.route('/health')
+def health():
+    """Health check endpoint for Cloud Run and container orchestration."""
+    try:
+        # Check database connectivity
+        db.session.execute(sa.text('SELECT 1'))
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'healthy',
+            'message': 'Service is running normally'
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f'Health check failed: {e}')
+        return jsonify({
+            'status': 'unhealthy',
+            'message': f'Service health check failed: {str(e)}'
+        }), 503
+
+
 @bp.before_app_request
 def before_request():
     if current_user.is_authenticated:
@@ -26,7 +46,6 @@ def before_request():
         db.session.commit()
         g.search_form = SearchForm()
     g.locale = str(get_locale())
-
 
 @bp.route('/', methods=['GET', 'POST'])
 @bp.route('/index', methods=['GET', 'POST'])
