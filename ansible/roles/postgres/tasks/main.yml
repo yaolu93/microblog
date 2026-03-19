@@ -1,0 +1,149 @@
+---
+# PostgreSQL installation and configuration
+
+- name: Install PostgreSQL repository key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+  ignore_errors: yes
+  when: ansible_os_family == "Debian"
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+  ignore_errors: yes
+  when: ansible_os_family == "Debian"
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Install PostgreSQL and dependencies
+  apt:
+    name:
+      - postgresql
+      - python3-psycopg2
+    state: present
+  ignore_errors: yes
+
+- name: Start PostgreSQL service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Wait for PostgreSQL to start
+  wait_for:
+    port: 5432
+    delay: 2
+    timeout: 30
+
+- name: Create PostgreSQL databases
+  shell: |
+    sudo -u postgres psql -c "CREATE DATABASE {{ item.name }} OWNER {{ item.owner | default('postgres') }};" || true
+  loop: "{{ postgres_databases }}"
+  changed_when: false
+
+- name: Create PostgreSQL users
+  shell: |
+    sudo -u postgres psql -c "CREATE USER {{ item.name }} WITH PASSWORD '{{ item.password }}';" || true
+  loop: "{{ postgres_users }}"
+  changed_when: false
+  no_log: yes
+
+- name: Grant privileges to users
+  shell: |
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ postgres_databases[0].name }} TO {{ item.name }};" || true
+  loop: "{{ postgres_users }}"
+  changed_when: false
+
+- name: Find PostgreSQL version from config directory
+  shell: ls /etc/postgresql/ | head -1 | grep -oE '[0-9]+'
+  register: pg_version_result  
+  changed_when: false
+  ignore_errors: yes
+
+- name: Set PostgreSQL version fact
+  set_fact:
+    pg_version: "{{ pg_version_result.stdout | default('15') }}"
+
+- name: Configure PostgreSQL postgresql.conf
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/postgresql.conf"
+    regexp: "^#?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    state: present
+  loop: "{{ postgres_config | dict2items }}"
+  notify: restart postgresql
+  ignore_errors: yes
+
+- name: Configure PostgreSQL pg_hba.conf for remote access
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/pg_hba.conf"
+    regexp: "^host.*all.*all.*127.0.0.1.*md5"
+    line: "host    all             all             0.0.0.0/0               md5"
+    state: present
+  notify: restart postgresql
+  ignore_errors: yes
+
+- name: Listen on all interfaces
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '{{ postgres_listen_addresses }}'"
+    state: present
+  notify: restart postgresql
+  ignore_errors: yes
+
+- name: Set PostgreSQL port
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version }}/main/postgresql.conf"
+    regexp: "^#?port"
+    line: "port = {{ postgres_port }}"
+    state: present
+  notify: restart postgresql
+  ignore_errors: yes
+
+- name: Enable PostgreSQL service
+  systemd:
+    name: postgresql
+    enabled: yes
+    state: started
+
+- name: Create backup directory
+  file:
+    path: "{{ postgres_backup_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0755"
+  when: postgres_backup_enabled
+
+- name: Create PostgreSQL backup script
+  copy:
+    dest: /usr/local/bin/backup-postgres.sh
+    content: |
+      #!/bin/bash
+      BACKUP_DIR="{{ postgres_backup_dir }}"
+      BACKUP_FILE="$BACKUP_DIR/microblog_db_$(date +\%Y\%m\%d_\%H\%M\%S).sql"
+      
+      pg_dump -U postgres microblog_db > "$BACKUP_FILE"
+      
+      # Keep only last 30 days of backups
+      find "$BACKUP_DIR" -name "*.sql" -mtime +{{ postgres_backup_retention_days }} -delete
+      
+      echo "Backup completed: $BACKUP_FILE"
+    mode: '0755'
+    owner: root
+  when: postgres_backup_enabled
+
+- name: Schedule PostgreSQL backups with cron
+  cron:
+    name: "PostgreSQL backup"
+    hour: "2"
+    minute: "0"
+    job: "/usr/local/bin/backup-postgres.sh >> /var/log/postgres_backup.log 2>&1"
+    user: root
+  when: postgres_backup_enabled

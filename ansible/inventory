@@ -1,0 +1,34 @@
+# Microblog Deployment Inventory
+
+# All production servers
+[all:vars]
+ansible_user = yao
+ansible_become = yes
+ansible_become_method = sudo
+
+# Web servers (Flask app with Gunicorn)
+[webservers]
+localhost ansible_connection=local app_env=production
+
+# Database servers (PostgreSQL)
+[dbservers]
+localhost ansible_connection=local db_env=production
+
+# Cache servers (Redis)
+[cacheservers]
+localhost ansible_connection=local cache_env=production
+
+# Search servers (Elasticsearch)
+[searchservers]
+localhost ansible_connection=local search_env=production
+
+# All application servers
+[app_servers:children]
+webservers
+dbservers
+cacheservers
+searchservers
+
+# Local development environment
+[local]
+localhost ansible_connection=local ansible_become=no

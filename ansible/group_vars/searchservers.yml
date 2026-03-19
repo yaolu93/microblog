@@ -1,0 +1,33 @@
+# Elasticsearch server specific variables
+---
+
+# Elasticsearch Configuration
+elasticsearch_version: 8.11
+elasticsearch_port: 9200
+elasticsearch_bind: 0.0.0.0
+
+# Cluster settings
+elasticsearch_cluster_name: microblog-cluster
+elasticsearch_node_name: "{{ inventory_hostname }}"
+elasticsearch_node_master: yes
+elasticsearch_node_data: yes
+
+# Memory settings (set to 50% of available system memory)
+elasticsearch_heap_size: "2g"
+
+# Discovery settings (for single node, set to avoid bootstrap checks)
+elasticsearch_discovery_type: single-node
+
+# Index settings
+elasticsearch_indices_memory_index_buffer_size: "30%"
+
+# Security (basic auth)
+elasticsearch_xpack_security_enabled: yes
+elasticsearch_xpack_security_enrollment_enabled: no
+
+# Logging
+elasticsearch_log_level: info
+elasticsearch_logdir: /var/log/elasticsearch
+
+# Java settings
+elasticsearch_java_home: /usr/lib/jvm/java-17-openjdk

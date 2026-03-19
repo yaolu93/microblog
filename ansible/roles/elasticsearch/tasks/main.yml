@@ -1,0 +1,105 @@
+---
+# Elasticsearch installation and configuration
+
+- name: Install Elasticsearch repository GPG key
+  apt_key:
+    url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Add Elasticsearch repository
+  apt_repository:
+    repo: "deb https://artifacts.elastic.co/packages/{{ elasticsearch_version | string | split('.') | first }}.x/apt stable main"
+    state: present
+    filename: "elastic-{{ elasticsearch_version | string }}.x"
+  when: ansible_os_family == "Debian"
+
+- name: Install Elasticsearch
+  apt:
+    name: "elasticsearch"
+    state: present
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Create Elasticsearch log directory
+  file:
+    path: "{{ elasticsearch_logdir }}"
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: "0755"
+
+- name: Create Elasticsearch configuration file
+  template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: "0660"
+  notify: restart elasticsearch
+
+- name: Create JVM options file
+  template:
+    src: jvm.options.j2
+    dest: /etc/elasticsearch/jvm.options.d/custom.options
+    owner: root
+    group: elasticsearch
+    mode: "0660"
+  notify: restart elasticsearch
+
+- name: Set sysctl settings for Elasticsearch
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+  loop:
+    - { key: "vm.max_map_count", value: "262144" }
+    - { key: "fs.file-max", value: "2097152" }
+
+- name: Configure Elasticsearch ulimits
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "elasticsearch soft memlock unlimited"
+    - "elasticsearch hard memlock unlimited"
+    - "elasticsearch soft nofile 65535"
+    - "elasticsearch hard nofile 65535"
+
+- name: Enable Elasticsearch service
+  systemd:
+    name: elasticsearch
+    enabled: yes
+    daemon_reload: yes
+
+- name: Start Elasticsearch service
+  systemd:
+    name: elasticsearch
+    state: started
+  ignore_errors: yes
+
+- name: Wait for Elasticsearch to start
+  uri:
+    url: "http://localhost:{{ elasticsearch_port }}"
+    method: GET
+    status_code: 200
+  register: elasticsearch_response
+  until: elasticsearch_response.status == 200
+  retries: 5
+  delay: 2
+  ignore_errors: yes
+
+- name: Display Elasticsearch version
+  debug:
+    msg: "Elasticsearch {{ elasticsearch_response.json.version.number }} is running"
+  when: elasticsearch_response is succeeded
+
+- name: Create Elasticsearch backup directory
+  file:
+    path: /var/backups/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: "0755"

@@ -1,0 +1,33 @@
+# Database server specific variables
+---
+
+# PostgreSQL Configuration
+postgres_version: 15
+postgres_databases:
+  - name: microblog_db
+    owner: microblog_user
+
+postgres_users:
+  - name: microblog_user
+    password: "{{ postgres_password | default('changeme123') }}"
+    encrypted: yes
+
+postgres_config:
+  max_connections: 100
+  shared_buffers: 256MB
+  effective_cache_size: 1GB
+  maintenance_work_mem: 64MB
+  checkpoint_completion_target: 0.9
+  wal_buffers: 16MB
+  default_statistics_target: 100
+  random_page_cost: 1.1
+  effective_io_concurrency: 200
+  work_mem: 4MB
+
+postgres_listen_addresses: "*"
+postgres_port: 5432
+
+# Backup settings
+postgres_backup_enabled: yes
+postgres_backup_dir: /var/backups/postgres
+postgres_backup_retention_days: 30

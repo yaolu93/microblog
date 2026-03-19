@@ -1,0 +1,23 @@
+# Web server specific variables
+---
+
+# Web app configuration
+app_workers: 4
+app_worker_class: sync
+app_bind: 127.0.0.1:8000
+
+# Environment variables for web servers
+web_env_vars:
+  FLASK_ENV: production
+  FLASK_APP: microblog.py
+  LOG_TO_STDOUT: "1"
+
+# Services to enable on web servers
+web_services:
+  - gunicorn
+  - nginx
+  - supervisor
+
+# Ports
+http_port: 80
+https_port: 443

@@ -1,0 +1,12 @@
+[Unit]
+Description=Gunicorn socket for Microblog application
+Before=gunicorn.service
+
+[Socket]
+ListenStream={{ app_path }}/gunicorn.sock
+SocketUser={{ app_user }}
+SocketGroup={{ app_group }}
+SocketMode=0666
+
+[Install]
+WantedBy=sockets.target

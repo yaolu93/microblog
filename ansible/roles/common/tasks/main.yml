@@ -1,0 +1,110 @@
+---
+# Common tasks for all servers
+
+- name: Update system packages
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install basic system packages
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - curl
+      - wget
+      - vim
+      - git
+      - htop
+      - net-tools
+      - ntp
+      - ntpdate
+      - build-essential
+      - libssl-dev
+      - libffi-dev
+      - python3-dev
+      - python3-pip
+      - python3-venv
+      - supervisor
+      - fail2ban
+  when: ansible_os_family == "Debian"
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Create application user
+  user:
+    name: "{{ app_user }}"
+    state: present
+    shell: /bin/bash
+    home: "{{ app_home }}"
+    createhome: yes
+
+- name: Create application directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  loop:
+    - "{{ app_home }}"
+    - "{{ app_path }}"
+    - "{{ log_dir }}"
+    - "{{ app_home }}/.ssh"
+
+- name: Configure SSH access for app user
+  authorized_key:
+    user: "{{ app_user }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  ignore_errors: yes
+
+- name: Enable fail2ban service
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started
+  when: firewall_enabled
+
+- name: Configure firewall rules (UFW)
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "22"
+    - "80"
+    - "443"
+  when: firewall_enabled and ansible_os_family == "Debian"
+
+- name: Configure SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }} {{ item.value }}"
+    state: present
+  loop:
+    - { key: "Port", value: "{{ ssh_port }}" }
+    - { key: "PermitRootLogin", value: "no" }
+    - { key: "PasswordAuthentication", value: "no" }
+  notify: restart ssh
+
+- name: Create log directory with proper permissions
+  file:
+    path: "{{ log_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled
+  when: firewall_enabled
+
+# Note: Skip pip global install due to Python 3.11 externally-managed-environment restriction
+# These packages are not essential as virtual environments will be created per application

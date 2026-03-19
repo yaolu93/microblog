@@ -1,0 +1,24 @@
+---
+# Application handlers
+
+- name: restart gunicorn
+  systemd:
+    name: gunicorn
+    state: restarted
+    daemon_reload: yes
+
+- name: reload gunicorn
+  systemd:
+    name: gunicorn
+    state: reloaded
+    daemon_reload: yes
+
+- name: restart rq-worker
+  systemd:
+    name: rq-worker
+    state: restarted
+    daemon_reload: yes
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

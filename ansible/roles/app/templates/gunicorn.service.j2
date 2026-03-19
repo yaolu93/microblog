@@ -1,0 +1,25 @@
+[Unit]
+Description=Gunicorn instance to serve Microblog application
+After=network.target
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_path }}
+Environment="PATH={{ venv_path }}/bin"
+Environment="PYTHONPATH={{ app_path }}"
+ExecStart={{ venv_path }}/bin/gunicorn \
+    --workers {{ gunicorn_workers }} \
+    --worker-class {{ gunicorn_worker_class }} \
+    --bind unix:{{ app_path }}/gunicorn.sock \
+    --timeout 120 \
+    --access-logfile {{ log_dir }}/access.log \
+    --error-logfile {{ log_dir }}/error.log \
+    --log-level info \
+    microblog:app
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,47 @@
+---
+# Deploy only the application (use for updates/hot deployment)
+# Usage: ansible-playbook deploy.yml -i inventory
+
+- name: Deploy Flask application
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Pull latest code from repository
+      git:
+        repo: "{{ git_repo }}"
+        dest: "{{ app_path }}"
+        version: "{{ git_branch }}"
+        force: yes
+      become_user: "{{ app_user }}"
+
+    - name: Install/update Python dependencies
+      pip:
+        requirements: "{{ app_path }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+        virtualenv_python: python{{ python_version }}
+      become_user: "{{ app_user }}"
+
+    - name: Run database migrations
+      shell: |
+        source {{ venv_path }}/bin/activate
+        flask db upgrade
+      args:
+        chdir: "{{ app_path }}"
+      environment:
+        FLASK_APP: microblog.py
+        DATABASE_URL: "postgresql://{{ postgres_user }}:{{ postgres_password }}@{{ groups['dbservers'][0] }}/microblog_db"
+      become_user: "{{ app_user }}"
+
+    - name: Compile translations
+      shell: |
+        source {{ venv_path }}/bin/activate
+        pybabel compile -d app/translations
+      args:
+        chdir: "{{ app_path }}"
+      become_user: "{{ app_user }}"
+
+    - name: Restart Gunicorn service
+      systemd:
+        name: gunicorn
+        state: restarted
+        daemon_reload: yes

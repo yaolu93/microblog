@@ -1,0 +1,12 @@
+---
+# Nginx handlers
+
+- name: test and reload nginx
+  shell: |
+    nginx -t && systemctl reload nginx
+
+- name: restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+    daemon_reload: yes

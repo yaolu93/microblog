@@ -1,0 +1,108 @@
+---
+# Redis installation and configuration
+
+- name: Install Redis dependencies
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - redis-server
+      - redis-tools
+      - python3-redis
+
+- name: Create Redis log directory
+  file:
+    path: "{{ redis_logdir }}"
+    state: directory
+    owner: redis
+    group: redis
+    mode: "0755"
+
+- name: Create Redis configuration file
+  template:
+    src: redis.conf.j2
+    dest: /etc/redis/redis.conf
+    owner: redis
+    group: redis
+    mode: "0644"
+  notify: restart redis
+
+- name: Ensure Redis is enabled and started
+  systemd:
+    name: redis-server
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Configure Redis to listen on all interfaces
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^# ?bind"
+    line: "bind {{ redis_bind }}"
+    state: present
+  notify: restart redis
+
+- name: Configure Redis port
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^port"
+    line: "port {{ redis_port }}"
+    state: present
+  notify: restart redis
+
+- name: Set Redis max memory
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^# ?maxmemory"
+    line: "maxmemory {{ redis_max_memory }}"
+    state: present
+  notify: restart redis
+
+- name: Set Redis max memory policy
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^# ?maxmemory-policy"
+    line: "maxmemory-policy {{ redis_max_memory_policy }}"
+    state: present
+  notify: restart redis
+
+- name: Configure Redis persistence
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^appendonly"
+    line: "appendonly {% if redis_appendonly %}yes{% else %}no{% endif %}"
+    state: present
+  notify: restart redis
+
+- name: Configure Redis appendfsync
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^appendfsync"
+    line: "appendfsync {{ redis_appendfsync }}"
+    state: present
+  notify: restart redis
+
+- name: Set Redis requirepass
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^# ?requirepass"
+    line: "requirepass {{ redis_requirepass }}"
+    state: present
+  notify: restart redis
+  no_log: yes
+
+- name: Test Redis connection
+  shell: |
+    redis-cli -h {{ redis_bind }} -p {{ redis_port }} -a {{ redis_requirepass }} ping
+  register: redis_ping
+  retries: 3
+  delay: 5
+  until: redis_ping.rc == 0
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display Redis status
+  debug:
+    msg: "Redis is running and responding to ping"
+  when: redis_ping is succeeded

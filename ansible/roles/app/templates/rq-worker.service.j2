@@ -1,0 +1,18 @@
+[Unit]
+Description=RQ Worker service for Microblog application
+After=network.target redis-server.service
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_path }}
+Environment="PATH={{ venv_path }}/bin"
+Environment="PYTHONPATH={{ app_path }}"
+ExecStart={{ venv_path }}/bin/rq worker microblog-tasks \
+    --url redis://:{{ redis_requirepass }}@{{ groups['cacheservers'][0] }}:6379/0
+    
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

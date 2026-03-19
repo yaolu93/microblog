@@ -1,0 +1,95 @@
+# Global variables for all hosts
+---
+
+# Application settings
+app_name: microblog
+app_user: microblog
+app_group: microblog
+app_home: /home/{{ app_user }}
+app_path: "{{ app_home }}/microblog"
+app_env: production
+
+# Python environment
+python_version: "3.11"
+venv_path: "{{ app_home }}/venv"
+
+# System settings
+timezone: UTC
+ntp_server: pool.ntp.org
+
+# Logging
+log_dir: /var/log/microblog
+log_level: INFO
+
+# Security
+ssh_port: 22
+firewall_enabled: yes
+
+# Package versions
+postgres_version: 15
+redis_version: 7
+elasticsearch_version: 8.11
+
+# ============================================
+# 🌐 单服务器部署配置 (Single Server)
+# ============================================
+# 所有服务都在同一台服务器 192.168.118.132 上
+# PostgreSQL、Redis、Elasticsearch 都使用 localhost
+
+# PostgreSQL 数据库连接配置
+# Web 服务器将使用 localhost 连接到本机数据库（同一台服务器）
+postgres_host: localhost              # 本机 PostgreSQL
+postgres_port: 5432
+postgres_user: microblog_user
+postgres_password: microblog_secure_pwd_2024  # ← 改为你的强密码
+postgres_database: microblog_db
+postgres_listen_address: "127.0.0.1"  # 本机连接即可
+
+# Redis 缓存连接配置
+# Web 服务器将使用 localhost 连接到本机 Redis（同一台服务器）
+redis_host: localhost                 # 本机 Redis
+redis_port: 6379
+redis_password: redis_secure_pwd_2024  # ← 改为你的强密码
+redis_bind: "127.0.0.1"               # 本机连接即可
+
+# Elasticsearch 搜索引擎连接配置
+# Web 服务器将使用 localhost 连接到本机 Elasticsearch（同一台服务器）
+elasticsearch_host: localhost         # 本机 Elasticsearch
+elasticsearch_port: 9200
+elasticsearch_bind: "127.0.0.1"       # 本机连接即可
+
+# Web 服务器配置
+web_server_ip: 192.168.118.132        # 服务器的 IP
+
+# ============================================
+
+# Repository settings
+git_repo: https://github.com/yourusername/microblog.git
+git_branch: main
+git_key: "{{ app_home }}/.ssh/id_rsa"
+
+# Flask Secret Key (用于会话加密，改为随机字符串)
+secret_key: your-secret-key-change-me-to-random-string-12345
+
+# Gunicorn settings
+gunicorn_workers: 4
+gunicorn_worker_class: sync
+gunicorn_bind: 127.0.0.1:8000
+
+# Nginx settings
+nginx_user: www-data
+nginx_worker_processes: auto
+nginx_max_connections: 1024
+
+# Mail Configuration (可选，用于邮件功能)
+mail_server: smtp.gmail.com
+mail_port: 587
+mail_use_tls: 1
+mail_username: ""
+mail_password: ""
+
+# Microsoft Translator (可选，用于翻译功能)
+ms_translator_key: ""
+
+# Server name (用于 Nginx 的 server_name)
+server_name: localhost

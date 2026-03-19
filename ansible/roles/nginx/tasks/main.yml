@@ -1,0 +1,156 @@
+---
+# Nginx web server installation and configuration
+
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Create Nginx configuration directory
+  file:
+    path: /etc/nginx/snippets
+    state: directory
+    mode: "0755"
+
+- name: Create Nginx main configuration
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: test and reload nginx
+
+- name: Create Nginx site configuration
+  template:
+    src: microblog.conf.j2
+    dest: /etc/nginx/sites-available/microblog
+    owner: root
+    group: root
+    mode: "0644"
+  notify: test and reload nginx
+
+- name: Enable Nginx site
+  file:
+    src: /etc/nginx/sites-available/microblog
+    dest: /etc/nginx/sites-enabled/microblog
+    state: link
+  notify: test and reload nginx
+
+- name: Disable default Nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: test and reload nginx
+
+- name: Create SSL certificate directory
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: "0755"
+
+- name: Create SSL certificate (self-signed for testing)
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/private.key
+    -out /etc/nginx/ssl/certificate.crt
+    -subj "/C=US/ST=State/L=City/O=Organization/CN={{ server_name | default('localhost') }}"
+  args:
+    creates: /etc/nginx/ssl/certificate.crt
+  when: ssl_mode | default('false') == 'self-signed' or ssl_enabled | default(false)
+
+- name: Set SSL certificate permissions
+  file:
+    path: /etc/nginx/ssl/private.key
+    mode: "0600"
+    owner: root
+    group: root
+  ignore_errors: yes
+
+- name: Create gzip compression snippet
+  copy:
+    dest: /etc/nginx/snippets/gzip.conf
+    content: |
+      # Gzip compression settings
+      gzip on;
+      gzip_vary on;
+      gzip_comp_level 6;
+      gzip_types text/plain text/css text/xml text/javascript
+                 application/json application/javascript application/xml+rss
+                 application/rss+xml font/truetype font/opentype
+                 application/vnd.ms-fontobject image/svg+xml;
+      gzip_disable "msie6";
+    mode: "0644"
+
+- name: Create security headers snippet
+  copy:
+    dest: /etc/nginx/snippets/security-headers.conf
+    content: |
+      # Security headers
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "no-referrer-when-downgrade" always;
+      add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+    mode: "0644"
+  notify: test and reload nginx
+
+- name: Create proxy parameters snippet
+  copy:
+    dest: /etc/nginx/snippets/proxy-params.conf
+    content: |
+      # Proxy parameters
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Port $server_port;
+      proxy_read_timeout 120s;
+      proxy_connect_timeout 120s;
+      proxy_send_timeout 120s;
+      proxy_buffer_size 128k;
+      proxy_buffers 4 256k;
+      proxy_busy_buffers_size 256k;
+    mode: "0644"
+  notify: test and reload nginx
+
+- name: Test Nginx configuration
+  command: nginx -t
+  register: nginx_test
+  changed_when: false
+  failed_when: nginx_test.rc != 0
+
+- name: Enable and start Nginx service
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Create Nginx log directory
+  file:
+    path: "{{ log_dir }}/nginx"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Create Nginx log rotation config
+  copy:
+    dest: /etc/logrotate.d/nginx
+    content: |
+      {{ log_dir }}/nginx/*.log {
+        daily
+        missingok
+        rotate 14
+        compress
+        delaycompress
+        notifempty
+        create 0640 www-data www-data
+        sharedscripts
+        postrotate
+          systemctl reload nginx > /dev/null 2>&1 || true
+        endscript
+      }
+    mode: "0644"

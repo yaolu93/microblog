@@ -1,0 +1,26 @@
+# Redis cache server specific variables
+---
+
+# Redis Configuration
+redis_version: 7
+redis_port: 6379
+redis_bind: 0.0.0.0
+redis_databases: 16
+redis_max_memory: 512mb
+redis_max_memory_policy: allkeys-lru
+
+# Redis persistence settings
+redis_save_rules:
+  - "900 1"      # Save if 1 key changed in 900 seconds
+  - "300 10"     # Save if 10 keys changed in 300 seconds
+  - "60 10000"   # Save if 10000 keys changed in 60 seconds
+
+redis_appendonly: yes
+redis_appendfsync: everysec
+
+# Redis password
+redis_requirepass: "{{ redis_password | default('changeme123') }}"
+
+# Redis logs
+redis_logdir: /var/log/redis
+redis_loglevel: notice

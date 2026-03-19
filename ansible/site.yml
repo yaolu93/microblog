@@ -1,0 +1,39 @@
+---
+# Main deployment playbook for Microblog application
+# Usage: ansible-playbook site.yml -i inventory -u ubuntu -k
+
+- name: Common setup for all servers
+  hosts: all
+  become: yes
+  roles:
+    - common
+
+- name: Setup PostgreSQL databases
+  hosts: dbservers
+  become: yes
+  roles:
+    - postgres
+
+- name: Setup Redis cache servers
+  hosts: cacheservers
+  become: yes
+  roles:
+    - redis
+
+- name: Setup Elasticsearch search servers
+  hosts: searchservers
+  become: yes
+  roles:
+    - elasticsearch
+
+- name: Deploy Flask application
+  hosts: webservers
+  become: yes
+  roles:
+    - app
+
+- name: Setup Nginx reverse proxy
+  hosts: webservers
+  become: yes
+  roles:
+    - nginx

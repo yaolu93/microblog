@@ -1,0 +1,154 @@
+---
+# Flask application deployment and configuration
+
+- name: Copy application from local source
+  synchronize:
+    src: "/home/yao/fromGithub/microblog/"
+    dest: "{{ app_path }}/"
+    archive: yes
+    delete: no
+  ignore_errors: yes
+  register: app_sync
+
+- name: Copy application (alternative method if synchronize fails)
+  shell: |
+    if [ ! -d "{{ app_path }}" ]; then
+      cp -r /home/yao/fromGithub/microblog {{ app_path }}
+    fi
+  when: app_sync is failed
+  ignore_errors: yes
+
+- name: Set application directory ownership
+  file:
+    path: "{{ app_path }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    recurse: yes
+  ignore_errors: yes
+
+- name: Create Python virtual environment
+  command: "python{{ python_version }} -m venv {{ venv_path }}"
+  args:
+    creates: "{{ venv_path }}/bin/activate"
+  become_user: "{{ app_user }}"
+
+- name: Install Python dependencies
+  pip:
+    requirements: "{{ app_path }}/requirements.txt"
+    virtualenv: "{{ venv_path }}"
+    virtualenv_python: python{{ python_version }}
+  become_user: "{{ app_user }}"
+
+- name: Create .env file from template
+  template:
+    src: env.j2
+    dest: "{{ app_path }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0600"
+  no_log: yes
+
+- name: Copy Flask configuration
+  copy:
+    src: "{{ app_path }}/config.py"
+    dest: "{{ app_path }}/config.py"
+    remote_src: yes
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+  ignore_errors: yes
+
+- name: Initialize Flask database
+  shell: |
+    source {{ venv_path }}/bin/activate
+    flask db upgrade
+  args:
+    chdir: "{{ app_path }}"
+  environment:
+    FLASK_APP: microblog.py
+    DATABASE_URL: "postgresql://{{ postgres_user }}:{{ postgres_password }}@localhost/microblog_db"
+  become_user: "{{ app_user }}"
+  ignore_errors: yes
+
+- name: Compile translations
+  shell: |
+    source {{ venv_path }}/bin/activate
+    pybabel compile -d app/translations
+  args:
+    chdir: "{{ app_path }}"
+  become_user: "{{ app_user }}"
+  ignore_errors: yes
+
+- name: Create Gunicorn systemd service
+  template:
+    src: gunicorn.service.j2
+    dest: /etc/systemd/system/gunicorn.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart gunicorn
+
+- name: Create Gunicorn socket systemd unit
+  template:
+    src: gunicorn.socket.j2
+    dest: /etc/systemd/system/gunicorn.socket
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart gunicorn
+
+- name: Create RQ Worker systemd service
+  template:
+    src: rq-worker.service.j2
+    dest: /etc/systemd/system/rq-worker.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart rq-worker
+
+- name: Enable and start Gunicorn service
+  systemd:
+    name: gunicorn
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Enable and start RQ Worker service
+  systemd:
+    name: rq-worker
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Create application log rotation config
+  copy:
+    dest: /etc/logrotate.d/microblog
+    content: |
+      {{ log_dir }}/*.log {
+        daily
+        missingok
+        rotate 14
+        compress
+        delaycompress
+        notifempty
+        create 0640 {{ app_user }} {{ app_group }}
+        sharedscripts
+        postrotate
+          systemctl reload gunicorn > /dev/null 2>&1 || true
+        endscript
+      }
+    mode: "0644"
+
+- name: Set proper permissions on application directory
+  file:
+    path: "{{ app_path }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+    recurse: yes
