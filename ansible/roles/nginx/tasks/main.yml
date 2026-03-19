@@ -115,6 +115,15 @@
     mode: "0644"
   notify: test and reload nginx
 
+- name: Create Nginx log directory (before testing configuration)
+  file:
+    path: "{{ log_dir }}/nginx"
+    state: directory
+    owner: "{{ nginx_log_owner | default('www-data') }}"
+    group: "{{ nginx_log_group | default('www-data') }}"
+    mode: "0755"
+  ignore_errors: yes
+
 - name: Test Nginx configuration
   command: nginx -t
   register: nginx_test
@@ -127,14 +136,6 @@
     enabled: yes
     state: started
     daemon_reload: yes
-
-- name: Create Nginx log directory
-  file:
-    path: "{{ log_dir }}/nginx"
-    state: directory
-    owner: www-data
-    group: www-data
-    mode: "0755"
 
 - name: Create Nginx log rotation config
   copy:

@@ -1,0 +1,123 @@
+---
+# 项目卸载和清理 playbook
+# 用途：停止所有服务，清理应用文件（保留数据库）
+# 使用方式：ansible-playbook undeploy.yml -i inventory
+
+- name: Stop and remove Microblog application
+  hosts: localhost
+  become: yes
+  vars:
+    app_user: microblog
+    app_group: microblog
+    app_home: /home/microblog
+    app_path: "{{ app_home }}/microblog"
+    venv_path: "{{ app_home }}/venv"
+
+  tasks:
+    - name: "Phase 1: Stop all services"
+      block:
+        - name: Stop Gunicorn service
+          systemd:
+            name: gunicorn
+            state: stopped
+          ignore_errors: yes
+
+        - name: Stop RQ Worker service
+          systemd:
+            name: rq-worker
+            state: stopped
+          ignore_errors: yes
+
+        - name: Stop Nginx service
+          systemd:
+            name: nginx
+            state: stopped
+          ignore_errors: yes
+
+        - name: Disable services from autostart
+          systemd:
+            name: "{{ item }}"
+            enabled: no
+          loop:
+            - gunicorn
+            - rq-worker
+            - nginx
+          ignore_errors: yes
+
+        - name: Display stopped services message
+          debug:
+            msg: "✅ 所有服务已停止"
+
+    - name: "Phase 2: Remove application files (keep database)"
+      block:
+        - name: Remove Gunicorn systemd service file
+          file:
+            path: /etc/systemd/system/gunicorn.service
+            state: absent
+
+        - name: Remove RQ Worker systemd service file
+          file:
+            path: /etc/systemd/system/rq-worker.service
+            state: absent
+
+        - name: Remove Nginx site configuration
+          file:
+            path: /etc/nginx/sites-available/microblog
+            state: absent
+
+        - name: Remove Nginx site enabled link
+          file:
+            path: /etc/nginx/sites-enabled/microblog
+            state: absent
+
+        - name: Remove application virtual environment
+          file:
+            path: "{{ venv_path }}"
+            state: absent
+
+        - name: Remove application code directory (保留数据)
+          file:
+            path: "{{ app_path }}"
+            state: absent
+
+        - name: Remove application logs
+          file:
+            path: /var/log/microblog
+            state: absent
+
+        - name: Remove application user
+          user:
+            name: "{{ app_user }}"
+            state: absent
+            remove: yes
+
+        - name: Reload systemd daemon
+          systemd:
+            daemon_reload: yes
+
+        - name: Display removed files message
+          debug:
+            msg: "✅ 应用文件已删除（数据库保留）"
+
+    - name: "Phase 3: Display undeployment summary"
+      block:
+        - name: Show final status
+          debug:
+            msg: |
+              ╔════════════════════════════════════════╗
+              ║     ✅ 项目卸载完成                     ║
+              ╠════════════════════════════════════════╣
+              ║ ✓ Gunicorn 服务已移除                 ║
+              ║ ✓ RQ Worker 服务已移除                ║
+              ║ ✓ Nginx 配置已移除                    ║
+              ║ ✓ 应用代码已删除                      ║
+              ║ ✓ 虚拟环境已删除                      ║
+              ║ ✓ 日志已清理                          ║
+              ║                                        ║
+              ║ 💾 数据库数据已保留                    ║
+              ║ 💾 PostgreSQL 仍在运行                ║
+              ║ 💾 Redis 仍在运行                     ║
+              ║                                        ║
+              ║ 重新部署使用:                         ║
+              ║   ansible-playbook deploy.yml         ║
+              ╚════════════════════════════════════════╝

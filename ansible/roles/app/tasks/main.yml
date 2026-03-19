@@ -12,9 +12,7 @@
 
 - name: Copy application (alternative method if synchronize fails)
   shell: |
-    if [ ! -d "{{ app_path }}" ]; then
-      cp -r /home/yao/fromGithub/microblog {{ app_path }}
-    fi
+    cp -rf /home/yao/fromGithub/microblog/* "{{ app_path }}/"
   when: app_sync is failed
   ignore_errors: yes
 
@@ -59,10 +57,12 @@
 
 - name: Initialize Flask database
   shell: |
+    set -e
     source {{ venv_path }}/bin/activate
     flask db upgrade
   args:
     chdir: "{{ app_path }}"
+    executable: /bin/bash
   environment:
     FLASK_APP: microblog.py
     DATABASE_URL: "postgresql://{{ postgres_user }}:{{ postgres_password }}@localhost/microblog_db"
@@ -71,10 +71,12 @@
 
 - name: Compile translations
   shell: |
+    set -e
     source {{ venv_path }}/bin/activate
     pybabel compile -d app/translations
   args:
     chdir: "{{ app_path }}"
+    executable: /bin/bash
   become_user: "{{ app_user }}"
   ignore_errors: yes
 

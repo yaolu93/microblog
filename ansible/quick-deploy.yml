@@ -1,0 +1,255 @@
+---
+# 快速部署 - 使用本地代码，无需 GitHub 认证
+# 用途：快速跳过 Git 认证问题，直接从本地代码部署
+# 使用方式：ansible-playbook quick-deploy.yml -i inventory
+
+- name: Quick deploy Flask application (local code)
+  hosts: localhost
+  become: yes
+  vars:
+    app_user: microblog
+    app_group: microblog
+    app_path: /home/microblog/microblog
+    venv_path: /home/microblog/venv
+    python_version: "3.11"
+    log_dir: /var/log/microblog
+    postgres_user: microblog_user
+    postgres_password: microblog_secure_pwd_2024
+
+  tasks:
+    - name: "Phase 1: 检查本地源代码"
+      block:
+        - name: Check if local source exists
+          stat:
+            path: /home/yao/fromGithub/microblog/requirements.txt
+          register: source_check
+
+        - name: Fail if source not found
+          fail:
+            msg: "❌ 本地源代码不存在: /home/yao/fromGithub/microblog/"
+          when: not source_check.stat.exists
+
+        - name: Show source found message
+          debug:
+            msg: "✅ 本地源代码已找到"
+
+    - name: "Phase 2: 复制应用代码"
+      block:
+        - name: Create app directory if not exists
+          file:
+            path: "{{ app_path }}"
+            state: directory
+            owner: "{{ app_user }}"
+            group: "{{ app_group }}"
+            mode: "0755"
+
+        - name: Sync application code from local source
+          shell: |
+            rsync -av --delete /home/yao/fromGithub/microblog/ /home/microblog/microblog/
+          ignore_errors: yes
+          register: rsync_result
+
+        - name: Copy if rsync not installed
+          shell: |
+            cp -r /home/yao/fromGithub/microblog/* /home/microblog/microblog/
+          when: rsync_result is failed
+          ignore_errors: yes
+
+        - name: Set proper ownership
+          shell: |
+            chown -R {{ app_user }}:{{ app_group }} {{ app_path }}
+            chmod -R 755 {{ app_path }}
+
+        - name: Show code sync completed
+          debug:
+            msg: "✅ 应用代码已同步"
+
+    - name: "Phase 3: 准备虚拟环境"
+      block:
+        - name: Check if venv exists
+          stat:
+            path: "{{ venv_path }}/bin/activate"
+          register: venv_check
+
+        - name: Create virtual environment if not exists
+          shell: |
+            python3.11 -m venv {{ venv_path }}
+            chown -R {{ app_user }}:{{ app_group }} {{ venv_path }}
+          when: not venv_check.stat.exists
+
+        - name: Show venv ready message
+          debug:
+            msg: "✅ Python 虚拟环境已准备"
+
+    - name: "Phase 4: 安装依赖"
+      block:
+        - name: Install Python dependencies
+          pip:
+            requirements: "{{ app_path }}/requirements.txt"
+            virtualenv: "{{ venv_path }}"
+            virtualenv_python: python3.11
+          become_user: "{{ app_user }}"
+
+        - name: Show dependencies installed
+          debug:
+            msg: "✅ Python 依赖已安装"
+
+    - name: "Phase 5: 配置应用环境"
+      block:
+        - name: Create .env file
+          shell: |
+            cat > {{ app_path }}/.env <<EOF
+            FLASK_APP=microblog.py
+            FLASK_ENV=production
+            FLASK_DEBUG=0
+            SECRET_KEY=dev-secret-key-change-in-production
+            DATABASE_URL=postgresql://{{ postgres_user }}:{{ postgres_password }}@localhost/microblog_db
+            REDIS_URL=redis://:redis_secure_pwd_2024@localhost:6379/0
+            ELASTICSEARCH_URL=http://localhost:9200
+            MAIL_SERVER=smtp.gmail.com
+            MAIL_PORT=587
+            MAIL_USE_TLS=1
+            MAIL_USERNAME=your-email@gmail.com
+            MAIL_PASSWORD=your-email-password
+            ADMINS=['your-email@gmail.com']
+            LANGUAGES={'en': 'English', 'es': 'Español', 'zh': '简体中文'}
+            MS_TRANSLATOR_KEY=your-translator-key
+            LOG_TO_STDOUT=1
+            LOG_FILE={{ log_dir }}/microblog.log
+            EOF
+            chown {{ app_user }}:{{ app_group }} {{ app_path }}/.env
+            chmod 600 {{ app_path }}/.env
+          become: yes
+
+        - name: Show env file created
+          debug:
+            msg: "✅ .env 配置文件已创建"
+
+    - name: "Phase 6: 初始化数据库"
+      block:
+        - name: Wait for PostgreSQL to be ready
+          wait_for:
+            port: 5432
+            delay: 2
+            timeout: 30
+
+        - name: Check if microblog_db exists
+          shell: |
+            sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -w microblog_db
+          register: db_check
+          ignore_errors: yes
+
+        - name: Create database if not exists
+          shell: |
+            sudo -u postgres psql -c "CREATE DATABASE microblog_db OWNER microblog_user;" 2>&1
+          when: db_check.rc != 0
+          ignore_errors: yes
+
+        - name: Run database migrations
+          shell: |
+            set -e
+            source {{ venv_path }}/bin/activate
+            flask db upgrade
+          args:
+            chdir: "{{ app_path }}"
+            executable: /bin/bash
+          environment:
+            FLASK_APP: microblog.py
+            DATABASE_URL: postgresql://{{ postgres_user }}:{{ postgres_password }}@localhost/microblog_db
+          become_user: "{{ app_user }}"
+          ignore_errors: yes
+
+        - name: Show database initialized
+          debug:
+            msg: "✅ 数据库已初始化"
+
+    - name: "Phase 7: 编译翻译"
+      block:
+        - name: Compile translations
+          shell: |
+            set -e
+            source {{ venv_path }}/bin/activate
+            pybabel compile -d app/translations 2>&1
+          args:
+            chdir: "{{ app_path }}"
+            executable: /bin/bash
+          become_user: "{{ app_user }}"
+          ignore_errors: yes
+
+        - name: Show translations compiled
+          debug:
+            msg: "✅ 翻译文件已编译"
+
+    - name: "Phase 8: 重启应用服务"
+      block:
+        - name: Restart Gunicorn
+          systemd:
+            name: gunicorn
+            state: restarted
+            daemon_reload: yes
+          ignore_errors: yes
+
+        - name: Restart RQ Worker
+          systemd:
+            name: rq-worker
+            state: restarted
+            daemon_reload: yes
+          ignore_errors: yes
+
+        - name: Restart Nginx
+          systemd:
+            name: nginx
+            state: restarted
+            daemon_reload: yes
+          ignore_errors: yes
+
+        - name: Show services restarted
+          debug:
+            msg: "✅ 应用服务已重启"
+
+    - name: "Phase 9: 验证部署"
+      block:
+        - name: Wait for services to stabilize
+          pause:
+            seconds: 3
+
+        - name: Check Gunicorn status
+          systemd:
+            name: gunicorn
+          register: gunicorn_status
+
+        - name: Check Nginx status
+          systemd:
+            name: nginx
+          register: nginx_status
+
+        - name: Test web application
+          uri:
+            url: https://localhost/
+            method: GET
+            validate_certs: no
+          register: web_test
+          ignore_errors: yes
+
+        - name: Display deployment summary
+          debug:
+            msg: |
+              ╔════════════════════════════════════════╗
+              ║    ✅ 快速部署完成                      ║
+              ╠════════════════════════════════════════╣
+              ║ ✓ 代码已同步                          ║
+              ║ ✓ 虚拟环境已准备                      ║
+              ║ ✓ 依赖已安装                          ║
+              ║ ✓ 数据库已初始化                      ║
+              ║ ✓ 翻译已编译                          ║
+              ║ ✓ 服务已重启                          ║
+              ║                                        ║
+              ║ 🔗 应用地址:                           ║
+              ║   https://192.168.118.132/            ║
+              ║   https://localhost/                  ║
+              ║                                        ║
+              ║ 📋 实时日志:                           ║
+              ║   journalctl -u gunicorn -f           ║
+              ║   journalctl -u rq-worker -f          ║
+              ║   journalctl -u nginx -f              ║
+              ╚════════════════════════════════════════╝

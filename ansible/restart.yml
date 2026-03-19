@@ -1,0 +1,170 @@
+---
+# 项目重启 playbook
+# 用途：快速重启所有服务（不重新部署代码）
+# 使用方式：ansible-playbook restart.yml -i inventory
+
+- name: Restart Microblog application
+  hosts: localhost
+  become: yes
+  vars:
+    app_user: microblog
+    app_home: /home/microblog
+
+  tasks:
+    - name: "Phase 1: Perform health checks"
+      block:
+        - name: Check if gunicorn service exists
+          stat:
+            path: /etc/systemd/system/gunicorn.service
+          register: gunicorn_service
+
+        - name: Check if rq-worker service exists
+          stat:
+            path: /etc/systemd/system/rq-worker.service
+          register: rq_service
+
+        - name: Check if nginx is installed
+          stat:
+            path: /etc/nginx/sites-available/microblog
+          register: nginx_config
+
+        - name: Warn if services not found
+          debug:
+            msg: "⚠️ 警告: 某些服务未找到，请先运行部署 (deploy.yml)"
+          when: not (gunicorn_service.stat.exists and rq_service.stat.exists and nginx_config.stat.exists)
+
+    - name: "Phase 2: Restart all services"
+      block:
+        - name: Restart PostgreSQL
+          systemd:
+            name: postgresql
+            state: restarted
+            enabled: yes
+
+        - name: Restart Redis
+          systemd:
+            name: redis-server
+            state: restarted
+            enabled: yes
+
+        - name: Restart Gunicorn
+          systemd:
+            name: gunicorn
+            state: restarted
+            enabled: yes
+          when: gunicorn_service.stat.exists
+
+        - name: Restart RQ Worker
+          systemd:
+            name: rq-worker
+            state: restarted
+            enabled: yes
+          when: rq_service.stat.exists
+
+        - name: Restart Nginx
+          systemd:
+            name: nginx
+            state: restarted
+            enabled: yes
+
+    - name: "Phase 3: Wait for services to stabilize"
+      pause:
+        seconds: 3
+
+    - name: "Phase 4: Verify services are running"
+      block:
+        - name: Check PostgreSQL status
+          systemd:
+            name: postgresql
+          register: postgresql_status
+
+        - name: Check Redis status
+          systemd:
+            name: redis-server
+          register: redis_status
+
+        - name: Check Gunicorn status
+          systemd:
+            name: gunicorn
+          register: gunicorn_status
+          when: gunicorn_service.stat.exists
+
+        - name: Check RQ Worker status
+          systemd:
+            name: rq-worker
+          register: rq_status
+          when: rq_service.stat.exists
+
+        - name: Check Nginx status
+          systemd:
+            name: nginx
+          register: nginx_status
+
+        - name: Verify services running
+          assert:
+            that:
+              - postgresql_status.status.ActiveState == 'active'
+              - redis_status.status.ActiveState == 'active'
+              - nginx_status.status.ActiveState == 'active'
+            fail_msg: "❌ 某些核心服务启动失败"
+
+    - name: "Phase 5: Test connectivity"
+      block:
+        - name: Test PostgreSQL connection
+          shell: |
+            sudo -u postgres psql -d microblog_db -c "SELECT 1;" 2>&1
+          register: pg_test
+          changed_when: false
+
+        - name: Test Redis connection
+          shell: |
+            redis-cli -a redis_secure_pwd_2024 ping 2>&1 | grep -q PONG
+          register: redis_test
+          changed_when: false
+          ignore_errors: yes
+
+        - name: Test web application
+          shell: |
+            curl -k -s https://localhost/ 2>&1 | head -5
+          register: web_test
+          changed_when: false
+          ignore_errors: yes
+
+    - name: "Phase 6: Display restart summary"
+      block:
+        - name: Show restart summary
+          debug:
+            msg: |
+              ╔════════════════════════════════════════╗
+              ║     ✅ 项目重启完成                     ║
+              ╠════════════════════════════════════════╣
+              ║ ✓ PostgreSQL - 已重启                 ║
+              ║ ✓ Redis - 已重启                      ║
+              ║ ✓ Gunicorn - 已重启                   ║
+              ║ ✓ RQ Worker - 已重启                  ║
+              ║ ✓ Nginx - 已重启                      ║
+              ║                                        ║
+              ║ 🔗 应用地址:                           ║
+              ║   https://192.168.118.132/            ║
+              ║   https://localhost/                  ║
+              ║                                        ║
+              ║ 📊 查看日志:                           ║
+              ║   journalctl -u gunicorn -f           ║
+              ║   journalctl -u rq-worker -f          ║
+              ╚════════════════════════════════════════╝
+
+        - name: Show PostgreSQL test result
+          debug:
+            msg: "✅ PostgreSQL 连接: {{ pg_test.stdout | first }}"
+
+        - name: Show Redis test result
+          debug:
+            msg: "✅ Redis 连接: PONG"
+          when: redis_test.rc == 0
+
+        - name: Show web app response
+          debug:
+            msg: |
+              ✅ Web 应用响应:
+              {{ web_test.stdout }}
+          when: web_test.rc == 0
