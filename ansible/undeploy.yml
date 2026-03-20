@@ -2,9 +2,10 @@
 # 项目卸载和清理 playbook
 # 用途：停止所有服务，清理应用文件（保留数据库）
 # 使用方式：ansible-playbook undeploy.yml -i inventory
+# cd /home/yao/fromGithub/microblog && ansible-playbook ansible/undeploy.yml -i ansible/inventory -e "target_host=192.168.118.131" -v
 
 - name: Stop and remove Microblog application
-  hosts: localhost
+  hosts: "{{ target_host | default('localhost') }}"
   become: yes
   vars:
     app_user: microblog
