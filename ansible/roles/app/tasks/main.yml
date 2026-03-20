@@ -1,20 +1,23 @@
 ---
 # Flask application deployment and configuration
 
-- name: Copy application from local source
-  synchronize:
-    src: "/home/yao/fromGithub/microblog/"
-    dest: "{{ app_path }}/"
-    archive: yes
-    delete: no
-  ignore_errors: yes
-  register: app_sync
+- name: Clone application from Git repository
+  git:
+    repo: "{{ git_repo }}"
+    dest: "{{ app_path }}"
+    version: "{{ git_branch }}"
+    force: yes
+  become_user: "{{ app_user }}"
+  register: app_clone
 
-- name: Copy application (alternative method if synchronize fails)
-  shell: |
-    cp -rf /home/yao/fromGithub/microblog/* "{{ app_path }}/"
-  when: app_sync is failed
-  ignore_errors: yes
+- name: Fallback - Create application directory if clone fails
+  file:
+    path: "{{ app_path }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  when: app_clone is failed
 
 - name: Set application directory ownership
   file:

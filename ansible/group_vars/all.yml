@@ -10,7 +10,7 @@ app_path: "{{ app_home }}/microblog"
 app_env: production
 
 # Python environment
-python_version: "3.11"
+python_version: "3.12"
 venv_path: "{{ app_home }}/venv"
 
 # System settings
@@ -64,7 +64,7 @@ web_server_ip: 192.168.118.132        # 服务器的 IP
 # ============================================
 
 # Repository settings
-git_repo: https://github.com/yourusername/microblog.git
+git_repo: https://github.com/yaolu93/microblog.git
 git_branch: main
 git_key: "{{ app_home }}/.ssh/id_rsa"
 

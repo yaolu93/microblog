@@ -1,0 +1,15 @@
+---
+# Deploy Flask application and Nginx to remote servers
+# Usage: ansible-playbook app-deploy.yml -i inventory -l webservers_remote
+
+- name: Deploy Flask application
+  hosts: webservers_remote
+  become: yes
+  roles:
+    - app
+
+- name: Deploy Nginx reverse proxy
+  hosts: webservers_remote
+  become: yes
+  roles:
+    - nginx

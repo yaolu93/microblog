@@ -1,26 +1,66 @@
 # Microblog Deployment Inventory
 
-# All production servers
+# All production servers global settings
 [all:vars]
 ansible_user = yao
 ansible_become = yes
 ansible_become_method = sudo
 
-# Web servers (Flask app with Gunicorn)
-[webservers]
+# ============================================================================
+# LOCAL DEPLOYMENT (localhost)
+# ============================================================================
+
+# Web servers (Flask app with Gunicorn) - Local
+[webservers:children]
+webservers_local
+webservers_remote
+
+[webservers_local]
 localhost ansible_connection=local app_env=production
 
-# Database servers (PostgreSQL)
-[dbservers]
+# Database servers (PostgreSQL) - Local
+[dbservers:children]
+dbservers_local
+dbservers_remote
+
+[dbservers_local]
 localhost ansible_connection=local db_env=production
 
-# Cache servers (Redis)
-[cacheservers]
+# Cache servers (Redis) - Local
+[cacheservers:children]
+cacheservers_local
+cacheservers_remote
+
+[cacheservers_local]
 localhost ansible_connection=local cache_env=production
 
-# Search servers (Elasticsearch)
-[searchservers]
+# Search servers (Elasticsearch) - Local
+[searchservers:children]
+searchservers_local
+searchservers_remote
+
+[searchservers_local]
 localhost ansible_connection=local search_env=production
+
+# ============================================================================
+# REMOTE DEPLOYMENT (192.168.118.131)
+# ============================================================================
+
+[webservers_remote]
+192.168.118.131 ansible_user=yao app_env=production
+
+[dbservers_remote]
+192.168.118.131 ansible_user=yao db_env=production
+
+[cacheservers_remote]
+192.168.118.131 ansible_user=yao cache_env=production
+
+[searchservers_remote]
+192.168.118.131 ansible_user=yao search_env=production
+
+# ============================================================================
+# GROUP DEFINITIONS
+# ============================================================================
 
 # All application servers
 [app_servers:children]
